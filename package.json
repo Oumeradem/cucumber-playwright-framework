@@ -1,0 +1,64 @@
+{
+  "name": "playwright-cucumber-framework",
+  "version": "1.0.0",
+  "description": "Production-ready Playwright + TypeScript + Cucumber BDD test automation framework with Allure and Cucumber reporting, multi-environment support, and AI-agent tooling.",
+  "private": true,
+  "keywords": [
+    "playwright",
+    "cucumber",
+    "bdd",
+    "typescript",
+    "allure",
+    "test-automation"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "cucumber-js",
+    "test:smoke": "cucumber-js --tags \"@smoke\"",
+    "test:sanity": "cucumber-js --tags \"@sanity\"",
+    "test:regression": "cucumber-js --tags \"@regression\"",
+    "test:critical": "cucumber-js --tags \"@critical\"",
+    "test:wip": "cucumber-js --tags \"@wip\"",
+    "test:headed": "HEADLESS=false cucumber-js",
+    "test:debug": "DEBUG=pw:api cucumber-js",
+    "test:dry-run": "cucumber-js --dry-run",
+    "test:chromium": "BROWSER=chromium cucumber-js",
+    "test:firefox": "BROWSER=firefox cucumber-js",
+    "test:webkit": "BROWSER=webkit cucumber-js",
+    "report:allure": "allure generate ./reports/allure-results --output ./reports/allure-report",
+    "report:allure:open": "allure open ./reports/allure-report",
+    "report:cucumber": "node ./scripts/summarize-cucumber-report.js",
+    "report:clean": "node ./scripts/clean-reports.js",
+    "lint": "eslint src scripts",
+    "lint:fix": "eslint src scripts --fix",
+    "format": "prettier --write \"**/*.{ts,js,json,jsonc,md,yml,yaml,mdx}\"",
+    "format:check": "prettier --check \"**/*.{ts,js,json,jsonc,md,yml,yaml,mdx}\"",
+    "typecheck": "tsc --noEmit",
+    "verify": "npm run lint && npm run format:check && npm run typecheck",
+    "verify:secrets": "node ./scripts/verify-secrets.js",
+    "jira:import": "node ./scripts/jira/import-results.mjs",
+    "jira:import:dry-run": "node ./scripts/jira/import-results.mjs --dry-run",
+    "jira:status": "node ./scripts/jira/update-status.mjs",
+    "install:browsers": "playwright install"
+  },
+  "dependencies": {
+    "@cucumber/cucumber": "^13.2.1",
+    "@faker-js/faker": "^9.6.0",
+    "@playwright/test": "^1.63.0",
+    "allure-cucumberjs": "^3.12.1",
+    "dotenv": "^17.4.2"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^22.20.2",
+    "allure": "^3.17.0",
+    "eslint": "^10.10.0",
+    "prettier": "^3.9.6",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.0",
+    "typescript-eslint": "^8.70.0"
+  }
+}

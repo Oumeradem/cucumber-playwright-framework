@@ -1,0 +1,84 @@
+name: Test Suite
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: test-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Lint / Format / Typecheck
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Verify
+        run: npm run verify
+
+  test:
+    name: Cucumber BDD suite (full)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: quality
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Prepare environment
+        env:
+          ENV: ${{ secrets.ENV || 'qa' }}
+          BASE_URL: ${{ secrets.BASE_URL }}
+          USERNAME: ${{ secrets.TEST_USERNAME }}
+          PASSWORD: ${{ secrets.TEST_PASSWORD }}
+          BROWSER: ${{ vars.BROWSER || 'chromium' }}
+          WORKERS: ${{ vars.WORKERS || '4' }}
+          TRACE: ${{ vars.TRACE || 'on-first-retry' }}
+        run: bash scripts/ci/prepare-env.sh
+      - name: Run suite
+        run: npx cucumber-js
+      - name: Generate reports
+        run: |
+          npm run report:cucumber
+          npm run report:allure
+      - name: Upload Cucumber report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cucumber-report
+          path: reports/cucumber-report/
+          if-no-files-found: ignore
+      - name: Upload Allure report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-report
+          path: reports/allure-report/
+          if-no-files-found: ignore
+      - name: Upload failure artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: failure-artifacts
+          path: reports/artifacts/
+          if-no-files-found: ignore

@@ -1,0 +1,61 @@
+name: Regression Tests
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Nightly regression run at 02:00 UTC
+    - cron: '0 2 * * *'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: regression-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  regression:
+    name: Regression suite (@regression)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Prepare environment
+        env:
+          ENV: ${{ secrets.ENV || 'qa' }}
+          BASE_URL: ${{ secrets.BASE_URL }}
+          USERNAME: ${{ secrets.TEST_USERNAME }}
+          PASSWORD: ${{ secrets.TEST_PASSWORD }}
+          WORKERS: ${{ vars.WORKERS || '4' }}
+        run: bash scripts/ci/prepare-env.sh
+      - name: Run regression suite
+        run: bash scripts/ci/run-tests.sh regression
+      - name: Upload Cucumber report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cucumber-regression-report
+          path: reports/cucumber-report/
+          if-no-files-found: ignore
+      - name: Upload Allure report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-regression-report
+          path: reports/allure-report/
+          if-no-files-found: ignore
+      - name: Upload failure artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: regression-failure-artifacts
+          path: reports/artifacts/
+          if-no-files-found: ignore

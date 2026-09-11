@@ -1,0 +1,34 @@
+# Dependencies & build output
+node_modules/
+dist/
+build/
+
+# Environment files (no parser can be inferred)
+.env
+.env.*
+
+# Dotfiles Prettier cannot parse (extensionless)
+.gitignore
+.prettierignore
+.eslintignore
+
+# Stray spec/prompt document kept for reference (Prettier cannot infer parser)
+Plawright-Cucumber-Framework-Prompt.md
+
+# Test artifacts & reports
+reports/
+allure-results/
+allure-report/
+playwright-report/
+test-results/
+screenshots/
+videos/
+traces/
+
+# Lockfiles
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+
+# Gherkin feature files (formatted by convention, not Prettier)
+**/*.feature

@@ -1,0 +1,35 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+
+# Environment and secrets - never commit real credentials
+.env
+.env.*
+!.env.example
+
+# Test artifacts
+reports/*
+!reports/.gitkeep
+allure-results/
+allure-report/
+playwright-report/
+test-results/
+screenshots/*
+!screenshots/.gitkeep
+videos/*
+!videos/.gitkeep
+traces/*
+!traces/.gitkeep
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json

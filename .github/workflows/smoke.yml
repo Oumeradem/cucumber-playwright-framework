@@ -1,0 +1,51 @@
+name: Smoke Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    name: Smoke suite (@smoke)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Prepare environment
+        env:
+          ENV: ${{ secrets.ENV || 'qa' }}
+          BASE_URL: ${{ secrets.BASE_URL }}
+          USERNAME: ${{ secrets.TEST_USERNAME }}
+          PASSWORD: ${{ secrets.TEST_PASSWORD }}
+          WORKERS: ${{ vars.WORKERS || '2' }}
+        run: bash scripts/ci/prepare-env.sh
+      - name: Run smoke suite
+        run: bash scripts/ci/run-tests.sh smoke
+      - name: Upload Cucumber report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cucumber-smoke-report
+          path: reports/cucumber-report/
+          if-no-files-found: ignore
+      - name: Upload Allure report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-smoke-report
+          path: reports/allure-report/
+          if-no-files-found: ignore

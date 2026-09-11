@@ -1,0 +1,11 @@
+{
+  "recommendations": [
+    "ms-playwright.playwright",
+    "alexkrechik.cucumberautocomplete",
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "ms-vscode.vscode-typescript-next",
+    "saoudrizwan.claude-dev"
+  ],
+  "unwantedRecommendations": []
+}
