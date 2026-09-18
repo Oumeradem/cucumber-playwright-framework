@@ -64,9 +64,9 @@ The reference application is [Swag Labs (Saucedemo)](https://www.saucedemo.com) 
 project-root/
 │
 ├── .cline/                      # Cline AI-agent toolchain
-│   ├── agents/                  # git/, planner/, test-generator/, healer/, jira-import/, jira-status/
+│   ├── agents/                  # orchestrator/, git/, planner/, test-generator/, healer/, jira-import/, jira-status/
 │   ├── skills/                  # playwright, cucumber, page-object-model, test-design, test-healing, git, jira, reporting, environment-management
-│   └── workflows/               # create-test, heal-test, jira-import, jira-status-update
+│   └── workflows/               # orchestrate-test, create-test, heal-test, jira-import, jira-status-update
 ├── .clinerules/                 # architecture, coding-standards, playwright, cucumber, locator, environment, git, agent, security, approval rules
 ├── .github/workflows/           # test.yml, smoke.yml, regression.yml
 ├── features/                    # Gherkin features, grouped by area
@@ -290,6 +290,7 @@ This repository ships a complete Cline toolchain to let AI agents plan, generate
 | `git/pr-agent`               | Drafts pull requests with real test results and report links               |
 | `jira-import/jira-import-agent` | Imports BDD scenarios into Jira after de-duplication                     |
 | `jira-status/jira-status-agent` | Syncs Jira statuses from the latest report (never PASS on FAIL)          |
+| `orchestrator/orchestrator-agent` | Coordinates the full pipeline (Planner → Test Generator → Healer → Branch → Commit → Push) with approval gates between every stage |
 
 ### Skills (`.cline/skills/`)
 
@@ -301,6 +302,7 @@ This repository ships a complete Cline toolchain to let AI agents plan, generate
 - `heal-test.md` — reproduce → analyze → fix (max 3) → validate
 - `jira-import.md` — dry-run first, then import
 - `jira-status-update.md` — update statuses from the latest report
+- `orchestrate-test.md` — full pipeline: plan → generate → heal → branch → commit → push (approval gates between stages)
 
 ### Rules (`.clinerules/`)
 

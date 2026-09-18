@@ -17,11 +17,12 @@ Every example in this guide uses **[ZincBank](https://zincbank.cydeo.io/login)**
 - [7. Git agents — branch, commit, push, pull request](#7-git-agents--branch-commit-push-pull-request)
 - [8. Jira Import Agent — turn scenarios into Jira issues](#8-jira-import-agent--turn-scenarios-into-jira-issues)
 - [9. Jira Status Agent — sync Jira with the latest run](#9-jira-status-agent--sync-jira-with-the-latest-run)
-- [10. Workflows — the recommended entry points](#10-workflows--the-recommended-entry-points)
-- [11. Skills — reusable know-how the agents follow](#11-skills--reusable-know-how-the-agents-follow)
-- [12. Rules & guardrails](#12-rules--guardrails)
-- [13. Quick reference: commands](#13-quick-reference-commands)
-- [14. Tips & best practices](#14-tips--best-practices)
+- [10. Orchestrator Agent — run the full pipeline](#10-orchestrator-agent--run-the-full-pipeline)
+- [11. Workflows — the recommended entry points](#11-workflows--the-recommended-entry-points)
+- [12. Skills — reusable know-how the agents follow](#12-skills--reusable-know-how-the-agents-follow)
+- [13. Rules & guardrails](#13-rules--guardrails)
+- [14. Quick reference: commands](#14-quick-reference-commands)
+- [15. Tips & best practices](#15-tips--best-practices)
 
 ---
 
@@ -40,6 +41,7 @@ The framework ships with a set of **specialized Cline agents** (defined in `.cli
 | `pr-agent`             | Drafts a pull request with real test results and report links — opens it **only after your approval**.                                               |
 | `jira-import-agent`    | Imports BDD scenarios into Jira as test issues. **Searches for duplicates first** and never creates them blindly.                                    |
 | `jira-status-agent`    | Syncs Jira issue statuses from the **latest** automation report. Never marks PASS when the latest result is FAIL.                                    |
+| `orchestrator-agent`   | Coordinates the full pipeline (Planner → Test Generator → Healer → Branch → Commit → Push) with **mandatory approval gates** between every stage.    |
 
 The intended flow through the agents looks like this:
 
@@ -65,12 +67,13 @@ Agents and workflows are invoked **by name** in Cline — either directly in a p
 
 Workflows are the safe, complete recipes. Use them for the common jobs:
 
-| Workflow             | Use when you want to…                                                          |
-| -------------------- | ------------------------------------------------------------------------------ |
-| `create-test`        | Add BDD coverage for a new ZincBank feature (plan → generate → run → verify).  |
-| `heal-test`          | Repair a failing ZincBank scenario (reproduce → analyze → fix ≤ 3 → validate). |
-| `jira-import`        | Turn ZincBank scenarios into Jira issues (dry-run first, dedupe, then import). |
-| `jira-status-update` | Update Jira issue statuses from the latest run.                                |
+| Workflow             | Use when you want to…                                                                                         |
+| -------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `create-test`        | Add BDD coverage for a new ZincBank feature (plan → generate → run → verify).                                 |
+| `heal-test`          | Repair a failing ZincBank scenario (reproduce → analyze → fix ≤ 3 → validate).                                |
+| `jira-import`        | Turn ZincBank scenarios into Jira issues (dry-run first, dedupe, then import).                                |
+| `jira-status-update` | Update Jira issue statuses from the latest run.                                                               |
+| `orchestrate-test`   | Full pipeline: plan → generate → run → heal → branch → commit → push. Pauses for your approval at every gate. |
 
 Example prompts that trigger them:
 
@@ -82,6 +85,8 @@ Example prompts that trigger them:
 /jira-import Import the ZincBank sign-in scenarios into Jira
 
 /jira-status-update Sync Jira with the latest ZincBank run
+
+/orchestrate-test Add BDD coverage for opening a ZincBank account at https://zincbank.cydeo.io/apply
 ```
 
 ### Calling a single agent
@@ -96,6 +101,8 @@ Use the Test Generator Agent to implement the ZincBank sign-in plan.
 Use the Healer Agent to fix the failing ZincBank transfer test.
 
 Use the Commit Agent to commit the ZincBank sign-in tests.
+
+Use the Orchestrator Agent to run the full pipeline end to end for the ZincBank sign-in flow.
 ```
 
 ### What happens under the hood
@@ -641,11 +648,83 @@ If ZINC-102's latest result is FAIL, the agent **must not** mark it PASS — eve
 
 ---
 
-## 10. Workflows — the recommended entry points
+## 10. Orchestrator Agent — run the full pipeline
+
+**Purpose:** Coordinate the specialized agents in the correct order — **Planner → Test Generator → Healer (if needed) → Branch → Commit → Push** — pausing for **your explicit approval between every major stage**. The Orchestrator never does the specialized work itself.
+
+**Key rules**
+
+- Never skip the Planner or Test Generator stages.
+- Always pause at approval gates — never auto-continue to the next agent.
+- Route failures to the Healer Agent (max 3 attempts), not a silent self-fix.
+- Route Git operations to the Git agents — never branch, commit, or push directly.
+- Validate every result against the latest run; report honest PASS/FAIL only.
+- Maintain the workflow state JSON and resume from the pending stage on `continue`.
+
+### Example prompt
+
+```text
+Use the Orchestrator Agent.
+Requirement: As a ZincBank customer I want to sign in with my email and password
+so that I can manage my accounts. Base URL: https://zincbank.cydeo.io/login.
+```
+
+### Example workflow state
+
+```json
+{
+  "workflow": "test-automation",
+  "currentStage": "TEST_GENERATION",
+  "status": "WAITING_FOR_APPROVAL",
+  "completedStages": ["PLANNER"],
+  "pendingStage": "TEST_GENERATOR",
+  "healingAttempts": 0,
+  "branch": null,
+  "commit": null,
+  "push": null
+}
+```
+
+### The approval-gated pipeline
+
+```text
+Planner Agent
+   ↓
+[USER APPROVAL]
+   ↓
+Test Generator Agent
+   ↓ (on failure, after approval)
+Healer Agent (max 3 attempts)
+   ↓
+[USER APPROVAL]
+   ↓
+Branch Agent → [USER APPROVAL] → Commit Agent → [USER APPROVAL] → Push Agent → [USER APPROVAL]
+   ↓
+END
+```
+
+### Approval prompt style
+
+```text
+✅ Planner Agent completed successfully.
+
+Created:
+- 8 test scenarios
+- Login workflow
+
+Next Agent:
+Test Generator Agent
+
+Do you want me to continue?
+```
+
+---
+
+## 11. Workflows — the recommended entry points
 
 Workflows chain the right agents together so you don't have to remember the order.
 
-### 10.1 `create-test` — add BDD coverage end to end
+### 11.1 `create-test` — add BDD coverage end to end
 
 Use when you want to add coverage for a new ZincBank requirement.
 
@@ -662,7 +741,7 @@ The workflow runs:
 | 3. Run & verify | —                    | `npx cucumber-js --tags "@wip"`, then `npm run verify` and `npm run report:cucumber`.                                        |
 | 4. Report       | —                    | Summarizes pass/fail counts. Does not commit/push unless you ask.                                                            |
 
-### 10.2 `heal-test` — repair a failing scenario
+### 11.2 `heal-test` — repair a failing scenario
 
 Use when a ZincBank scenario fails.
 
@@ -672,7 +751,7 @@ Use when a ZincBank scenario fails.
 
 The workflow runs: reproduce → analyze evidence → apply **at most 3** targeted fixes → validate with `npm run verify`. If still failing after 3 attempts it **stops and asks you for help**.
 
-### 10.3 `jira-import` — file scenarios as Jira issues
+### 11.3 `jira-import` — file scenarios as Jira issues
 
 ```text
 /jira-import Import the ZincBank account-application scenarios into Jira
@@ -680,7 +759,7 @@ The workflow runs: reproduce → analyze evidence → apply **at most 3** target
 
 Dry-run first (mandatory), de-duplicate, then create issues only after you approve.
 
-### 10.4 `jira-status-update` — sync statuses from the latest run
+### 11.4 `jira-status-update` — sync statuses from the latest run
 
 ```text
 /jira-status-update Update Jira from the latest ZincBank run
@@ -688,9 +767,28 @@ Dry-run first (mandatory), de-duplicate, then create issues only after you appro
 
 Fresh report first, map scenarios → issues, transition statuses. Never PASS on a FAIL result.
 
+### 11.5 `orchestrate-test` — full pipeline with approval gates
+
+Use when you want the whole journey: plan → generate → run → heal (if needed) → branch → commit → push.
+
+```text
+/orchestrate-test Add BDD coverage for opening a ZincBank account at https://zincbank.cydeo.io/apply
+```
+
+The **Orchestrator Agent** drives the pipeline and **pauses for your explicit approval between every major stage**:
+
+| Stage               | Agent                | What happens                                                                       |
+| ------------------- | -------------------- | ---------------------------------------------------------------------------------- |
+| 1. Plan             | Planner Agent        | Inspects the live app, produces a BDD test plan in `specs/` (after your approval). |
+| 2. Generate         | Test Generator Agent | Creates feature file, step definitions, Page Objects; runs the tests.              |
+| 3. Heal (if needed) | Healer Agent         | Fixes failures — max 3 attempts, then stops and asks you.                          |
+| 4. Branch           | Branch Agent         | Creates a `<type>/<kebab-case>` branch.                                            |
+| 5. Commit           | Commit Agent         | Conventional Commit after secret/diff review.                                      |
+| 6. Push             | Push Agent           | Pushes to the remote — only after your approval.                                   |
+
 ---
 
-## 11. Skills — reusable know-how the agents follow
+## 12. Skills — reusable know-how the agents follow
 
 Skills are packaged expertise the agents load when working. You can also reference them directly in a prompt to steer behaviour.
 
@@ -715,7 +813,7 @@ negative, and boundary cases, and keep scenarios isolated.
 
 ---
 
-## 12. Rules & guardrails
+## 13. Rules & guardrails
 
 All agents operate under the rules in `.clinerules/`. The most important ones to know:
 
@@ -733,7 +831,7 @@ All agents operate under the rules in `.clinerules/`. The most important ones to
 
 ---
 
-## 13. Quick reference: commands
+## 14. Quick reference: commands
 
 ```bash
 # Run tests
@@ -762,7 +860,7 @@ npm run jira:status -- ZINC-101 "Passed"  # transition an issue
 
 ---
 
-## 14. Tips & best practices
+## 15. Tips & best practices
 
 1. **Let the Planner look at the real app.** ZincBank's copy changes (e.g. the button says `Sign in`, not `Log in`). Always let the Planner/Healer verify the live DOM — don't guess from memory.
 2. **Run dry runs first.** `npm run test:dry-run` catches missing/ambiguous steps, `npm run jira:import:dry-run` previews Jira changes. Cheap and safe.

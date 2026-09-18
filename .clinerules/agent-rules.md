@@ -8,5 +8,6 @@
 - **Planner Agent**: inspect the live application (browser/Playwright MCP) before proposing scenarios; produce a plan, not code.
 - **Test Generator Agent**: reuse existing Page Objects and step definitions; run the generated test before finishing.
 - **Git agents**: never commit secrets, never push without approval, never commit blindly.
+- **Orchestrator Agent**: coordinate the specialized agents in the correct order (Planner → Test Generator → Healer if needed → Branch → Commit → Push); never perform their work yourself; always pause for explicit user approval between major stages; never run Git operations directly.
 - When unsure about a destructive action, ask the user first.
 - Do not modify unrelated files; keep changes scoped to the task.
