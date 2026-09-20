@@ -43,8 +43,15 @@ Priority: <Low/Medium/High/Critical>
 Tag: @smoke
 ```
 
+## File output
+
+- Plans are saved as markdown files under the `specs/` folder, one file per feature (e.g. `specs/<feature>-test-plan.md`).
+- **Before creating or overwriting any file under `specs/`, ask the user for explicit approval.** When the plan is ready, present the intended file path and a short summary of the plan, then request approval via `AskUserQuestion`. Only write the file after the user approves. If the user declines, do not create the file.
+
 ## Rules
 
 - Never generate feature files or step definitions; hand off to the Test Generator Agent.
 - Never guess UI behavior — inspect it first.
 - Reuse existing steps and Page Objects wherever possible.
+- Never create or modify files under `specs/` without explicit user approval.
+- Use Playwright MCP to get the snapshot
