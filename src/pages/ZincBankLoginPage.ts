@@ -30,21 +30,44 @@ export class ZincBankLoginPage extends BasePage {
   }
 
   public async fillEmail(email: string): Promise<void> {
+    // Ensure the email input is ready and visible before filling
+    await this.emailInput.waitFor({ state: 'visible' });
     await this.emailInput.fill(email);
   }
 
   public async fillPassword(password: string): Promise<void> {
+    // Ensure the password input is ready and visible before filling
+    await this.passwordInput.waitFor({ state: 'visible' });
     await this.passwordInput.fill(password);
   }
 
   public async submit(): Promise<void> {
-    // Click the submit button. May trigger navigation (successful sign-in) or validation
-    // error message (failed sign-in, validation errors). Wait for the form to be stable.
-    // Use a network idle or load state to handle both navigation and client-side validation.
-    await Promise.all([
-      this.page.waitForLoadState('networkidle'), // Handles both navigation and form validation
-      this.signInButton.click(),
-    ]);
+    // Click the submit button. This may trigger:
+    // 1. Navigation to /dashboard (successful sign-in)
+    // 2. A client-side validation error message (failed sign-in, empty fields, etc.)
+    // We must click FIRST, then wait for the network to settle (or navigation to occur).
+    // If client-side validation shows an error, the page stays on /login with no network activity.
+    // If submission succeeds, the page navigates to /dashboard.
+    // Ensure the button is enabled and visible before clicking
+    await this.signInButton.waitFor({ state: 'visible' });
+    await this.signInButton.click();
+    // Wait for network to settle after the click. This handles both:
+    // - Navigation to /dashboard (successful sign-in)
+    // - Client-side validation errors that appear without navigation
+    try {
+      // Use a short timeout for navigation; if no nav occurs, we'll wait for load state instead
+      await this.page.waitForNavigation({ waitUntil: 'networkidle', timeout: 3000 });
+    } catch {
+      // Navigation may not happen (client-side validation), so wait for load state to settle
+      await this.page.waitForLoadState('networkidle');
+    }
+    // After sign-in attempt, if we're on the dashboard, wait for the page to fully load
+    // (including the authenticated app shell with header/nav). This prevents race conditions
+    // where nav elements haven't rendered yet.
+    const currentUrl = this.page.url();
+    if (currentUrl.includes('/dashboard')) {
+      await this.page.waitForLoadState('load');
+    }
   }
 
   /** Fills both fields and submits the form. */
