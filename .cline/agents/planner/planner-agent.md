@@ -23,6 +23,7 @@ You convert requirements into a structured BDD test plan. You inspect the real a
 6. Identify reusable steps and existing Page Objects (search `src/pages/`, `src/steps/`) to avoid duplication.
 7. Identify required test data and preconditions.
 8. Assign tags (`@smoke`, `@sanity`, `@critical`, `@regression`, `@wip`) and priority.
+9. Use Jira MCP to get the AC from jira by using Ticket number
 
 ## Output format
 
